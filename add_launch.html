@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:image/ico;base64,aWNv">
+    <meta http-equiv="cache-control" content="no-cache" />
+    <meta content="yes" name="apple-touch-fullscreen" />
+    <meta content="yes" name="apple-mobile-web-app-capable" />
+    <meta content="white" name="apple-mobile-web-app-status-bar-style" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1.0, maximum-scale=1.0" />
+    <meta content="default" name="apple-mobile-web-app-status-bar-style">
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#F0EFF4">
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#181A1B">
+
+    <link id="LL_icon" sizes="114x114" rel="apple-touch-icon-precomposed" />
+    <title id="LL_title"></title>
+    <script>document.documentElement.style.fontSize = document.documentElement.clientWidth * 100 / 375 + 'px';</script>
+
+    <style>
+        body {
+            height: 100%;
+            font-family: "SF Pro Display", "SF Pro Icons", "Helvetica Neue", -apple-system, "Noto Sans", Helvetica, Arial, sans-serif;
+        }
+        .tips {
+            width: 350px;
+            height: 117px;
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            margin-left: -175px;
+        }
+        .app-icon {
+            width: 72px;
+            height: 72px;
+            border-radius: 12px;
+            margin: 0 auto;
+            margin-top: 200px;
+            display: block;
+            box-shadow: 0px 0px 16px rgba(0,0,0,0.06);
+        }
+        .app-name {
+            margin-top: 12px;
+            text-align: center;
+            font-size: 18px;
+        }
+        @media (prefers-color-scheme: dark) {
+            body { background-color: #181A1B; }
+            .app-name { color: #E1E3E4; }
+        }
+    </style>
+</head>
+<body>
+
+<img src="" id="appIcon" class="app-icon" />
+<div id="appName" class="app-name"></div>
+
+<!-- Màn hình hướng dẫn Save (hiện khi chưa add to home) -->
+<div id="savePage" style="display:none">
+    <!-- Ảnh hướng dẫn "Share → Add to Home Screen" -->
+    <img id="appTips" class="tips" src="" alt="">
+</div>
+
+<script>
+    // ── Detect ngôn ngữ ──
+    function get_lang() {
+        var lang = (window.navigator.languages && window.navigator.languages[0]) || window.navigator.language || 'en';
+        lang = lang.toLowerCase();
+        if (lang.startsWith('zh')) {
+            return (lang.includes('hant') || lang.includes('tw') || lang.includes('hk')) ? 'zh-hant' : 'zh';
+        }
+        if (lang.startsWith('ja')) return 'ja';
+        if (lang.startsWith('vi')) return 'vi';
+        return 'en';
+    }
+
+    // ── Parse query string ──
+    function getParam(query, key) {
+        var vars = query.split("&");
+        for (var i = 0; i < vars.length; i++) {
+            var pair = vars[i].split("=");
+            if (pair[0] === key) return pair[1];
+        }
+        return false;
+    }
+
+    var query    = window.location.search.substring(1);
+    var getUrl   = decodeURIComponent(getParam(query, "url")   || "");
+    var getTitle = decodeURIComponent(getParam(query, "title") || "App");
+    var getIcon  = "";
+
+    // Icon: có thể là URL đầy đủ hoặc ID ngắn
+    var iconParam = getParam(query, "icon");
+    if (iconParam && iconParam !== "nil") {
+        getIcon = decodeURIComponent(iconParam);
+        if (getIcon.indexOf("http") === -1) {
+            // ID ngắn → ghép CDN (dùng YouTube icon mặc định nếu không có CDN riêng)
+            getIcon = "https://cdn-icons-png.flaticon.com/512/" + getIcon + ".png";
+        }
+    }
+
+    // Reconstruct URL (giữ nguyên scheme + path)
+    var myScheme = getUrl.split("//")[0] + "//";
+    var myQuery  = getUrl.split("//")[1] || "";
+    window.JumpUrl = myScheme + myQuery;
+
+    // ── Ảnh hướng dẫn theo ngôn ngữ ──
+    // Dùng ảnh tự vẽ bằng Canvas vì không có CDN ngoài
+    var lang = get_lang();
+
+    var guideText = {
+        'en':      'Tap the Share button below, then select\n"Add to Home Screen"',
+        'zh':      '点击下方分享按钮，选择\n"添加到主屏幕"',
+        'zh-hant': '點擊下方分享按鈕，選擇\n「加入主畫面」',
+        'ja':      '下の共有ボタンをタップして\n「ホーム画面に追加」を選択',
+        'vi':      'Nhấn nút Chia sẻ bên dưới,\nchọn "Thêm vào Màn hình chính"',
+    };
+    var guide = guideText[lang] || guideText['en'];
+
+    // Vẽ banner hướng dẫn bằng Canvas
+    function makeTipsBanner(text) {
+        var canvas = document.createElement('canvas');
+        canvas.width = 700; canvas.height = 234;
+        var ctx = canvas.getContext('2d');
+        // nền
+        ctx.fillStyle = 'rgba(30,30,30,0.92)';
+        roundRect(ctx, 0, 0, 700, 234, 20);
+        ctx.fill();
+        // mũi tên chỉ xuống
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 36px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('↑', 350, 50);
+        // text hướng dẫn
+        ctx.font = '26px Arial';
+        ctx.fillStyle = '#eee';
+        var lines = text.split('\n');
+        lines.forEach(function(line, i) {
+            ctx.fillText(line, 350, 110 + i * 40);
+        });
+        return canvas.toDataURL();
+    }
+
+    function roundRect(ctx, x, y, w, h, r) {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + w - r, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+        ctx.lineTo(x + w, y + h - r);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        ctx.lineTo(x + r, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+        ctx.lineTo(x, y + r);
+        ctx.quadraticCurveTo(x, y, x + r, y);
+        ctx.closePath();
+    }
+
+    // ── Main logic ──
+    if (window.navigator.standalone) {
+        // Đang mở từ Home Screen → redirect ngay
+        window.location.href = window.JumpUrl;
+        document.getElementById('appIcon').style.display = 'none';
+        document.getElementById('appName').style.display = 'none';
+
+        // Mỗi lần quay lại tab → redirect lại
+        document.addEventListener('visibilitychange', function() {
+            if (document.visibilityState === 'visible') {
+                window.location.href = window.JumpUrl;
+            }
+        });
+
+    } else {
+        // Lần đầu mở trong Safari → hiện hướng dẫn
+        document.getElementById('appIcon').src         = getIcon;
+        document.getElementById('appName').innerHTML   = getTitle;
+        document.getElementById('LL_title').textContent = getTitle;
+        document.getElementById('LL_icon').setAttribute('href', getIcon);
+
+        // Hiện banner hướng dẫn
+        document.getElementById('savePage').style.display = 'block';
+        document.getElementById('appTips').src = makeTipsBanner(guide);
+    }
+</script>
+</body>
+</html>
