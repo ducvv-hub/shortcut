@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>YouTube</title>
+
+  <!-- PWA / Add to Home Screen -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="YouTube">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+
+  <!-- Icon hiện trên Home Screen -->
+  <link rel="apple-touch-icon" href="https://i.imgur.com/y4AZKFV.png">
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      flex-direction: column;
+      font-family: -apple-system, sans-serif;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    svg {
+      width: 80px; height: 80px;
+      animation: pop .35s cubic-bezier(.34,1.56,.64,1) both;
+    }
+    p {
+      color: #888;
+      font-size: 13px;
+      margin-top: 16px;
+      letter-spacing: .02em;
+      animation: fade .8s .2s ease both;
+      opacity: 0;
+    }
+    @keyframes pop {
+      from { transform: scale(.5); opacity: 0; }
+      to   { transform: scale(1);  opacity: 1; }
+    }
+    @keyframes fade { to { opacity: 1; } }
+  </style>
+</head>
+<body>
+
+  <svg viewBox="0 0 90 90" xmlns="http://www.w3.org/2000/svg">
+    <rect width="90" height="90" rx="20" fill="#FF0000"/>
+    <path d="M63 45.5l-27 15V30.5l27 15z" fill="#fff"/>
+  </svg>
+  <p>Đang mở YouTube…</p>
+
+<script>
+  // Chỉ chạy khi được mở từ Home Screen (standalone mode)
+  // Nếu mở trong Safari bình thường thì không redirect
+  var isStandalone = window.navigator.standalone === true;
+  var isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+
+  if (isIOS && isStandalone) {
+    // Mở từ Home Screen → thử deep link vào app YouTube
+    window.location.href = "youtube://";
+
+    // Nếu app không cài → fallback về web sau 1.5s
+    setTimeout(function() {
+      window.location.href = "https://www.youtube.com";
+    }, 1500);
+
+  } else if (isIOS && !isStandalone) {
+    // Đang mở trong Safari → hướng dẫn Add to Home Screen
+    document.querySelector("p").textContent = "Nhấn chia sẻ → "Thêm vào Màn hình chính"";
+
+  } else {
+    // Desktop / Android
+    setTimeout(function() {
+      window.location.href = "https://www.youtube.com";
+    }, 1200);
+  }
+</script>
+</body>
+</html>
